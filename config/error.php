@@ -1,10 +1,5 @@
 <?php
 
-define('SPWX_API_TOKEN',  '');
-define('SPWX_APP_ID',     '');
-define('SPWX_APP_SECRET', '');
-
-
 $GLOBALS['ERROR_CODE'] = array(
     -1	    => '系统繁忙',
     0	    => '请求成功',
@@ -66,3 +61,4 @@ $GLOBALS['ERROR_CODE'] = array(
     46003	=>	'不存在的菜单数据',
     47001	=>	'解析JSON/XML内容错误',
 );
+

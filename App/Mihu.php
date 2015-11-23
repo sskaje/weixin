@@ -1,40 +1,5 @@
 <?php
 
-class spWxRequestDefault extends spWxRequest
-{
-    protected $message;
-
-    public function __construct(array $message)
-    {
-        $this->message = $message;
-    }
-
-    public function response()
-    {
-        $msg = new spWxResponseText(
-            $this->message['from_username'],
-            $this->message['to_username']
-        );
-
-        if ($this->message['msg_type'] == spWxMessage::REQUEST_TEXT) {
-            $msg->setContent('你输入了文本消息，消息内容是：' . $this->message['content']);
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
-            $msg->setContent('你发送了一张图片，图片地址是：' . $this->message['pic_url']);
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_LOCATION) {
-            $msg->setContent('你发送了一个坐标，地址是：('.$this->message['geo']['latitude'].', '.$this->message['geo']['longitude'].')');
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
-            $msg->setContent('你发送了一个链接，地址是：' . $this->message['link']['url']);
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_EVENT) {
-            $msg->setContent('你发送了一个事件，类型是：' . $this->message['event']['event']);
-        } else {
-            $msg->setContent('为什么你会发送这样的消息？');
-
-        }
-
-        echo (string) $msg;
-        exit;
-    }
-}
 
 class MHRequestDefault extends spWxRequest
 {
@@ -59,9 +24,9 @@ class MHRequestDefault extends spWxRequest
 
             echo (string) $msg;
             exit;
-        #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
+            #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
             #$msg->setContent('你发送了一张图片，图片地址是：' . $this->message['pic_url']);
-        #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
+            #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
             #$msg->setContent('你发送了一个链接，地址是：' . $this->message['link']['url']);
         } else {
 
@@ -364,6 +329,3 @@ class MHLevelTest
     }
 }
 
-
-
-# EOF

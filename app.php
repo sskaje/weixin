@@ -1,5 +1,4 @@
 <?php
-
 require(__DIR__ . '/config/error.php');
 require(__DIR__ . '/classes/weixin.class.php');
 require(__DIR__ . '/classes/request.class.php');
@@ -14,13 +13,33 @@ if (!is_file($app_file)) {
 
 require($app_file);
 
-foreach ($GLOBALS['REQUEST_HANDLERS'] as $request_type=>$handler_class) {
-    if (!class_exists($handler_class) || !is_subclass_of($handler_class, 'spWxRequest')) {
-        throw new SPException('微信请求处理类'.$handler_class.'定义错误', 1002);
-    }
 
-    spWxMessage::RegisterHandler($request_type, $handler_class);
+function usage()
+{
+    echo <<<USAGE
+Usage:
+    php app.php COMMAND OPTIONS
+
+        Commands:
+            create_menu         CreateMenu
+
+
+
+USAGE;
+
+    exit;
 }
 
-spWxMessage::MessageAPI();
-exit;
+if (!isset($argv[1])) {
+    usage();
+}
+
+$command = strtolower($argv[1]);
+
+$app = spWeixin::App();
+
+if ($command == 'create_menu') {
+    $menu_class = SPWX_MENU_CLASS;
+
+    $app->createMenu($menu_class);
+}

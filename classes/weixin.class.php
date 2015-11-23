@@ -94,6 +94,8 @@ class spWxMessage
     const REQUEST_EVENT     = 'event';
     const REQUEST_VOICE     = 'voice';
     const REQUEST_VIDEO     = 'video';
+    const REQUEST_SHORTVIDEO= 'shortvideo';
+    const REQUEST_LINK      = 'link';
 
     /**
      * 处理消息
@@ -110,7 +112,6 @@ class spWxMessage
         }
 
         $object = new $class($message);
-        $object->checkSig();
         $object->response();
         exit;
     }
@@ -145,216 +146,12 @@ class spWxMessage
     }
 }
 
-/**
- * 请求基类
- *
- */
-abstract class spWxRequest
+
+class spWeixin
 {
-    abstract public function response();
-    abstract public function __construct(array $message);
-
-    final public function checkSig()
+    static public function App()
     {
-        if (!defined('SPWX_API_TOKEN')) {
-            throw new SPException('SPWX_API_TOKEN not defined');
-        }
-        if (!isset($_GET['signature']) || !isset($_GET['timestamp']) || !isset($_GET['nonce'])) {
-            throw new SPException('Missing params');
-        }
-
-        $token = SPWX_API_TOKEN;
-        $tmpArr = array($token, $_GET['timestamp'], $_GET['nonce']);
-        sort($tmpArr);
-        $tmpStr = implode($tmpArr);
-        $tmpStr = sha1($tmpStr);
-
-        if ($tmpStr == $_GET['signature']) {
-            return true;
-        } else {
-            throw new SPException('Invalid Signature');
-        }
-    }
-}
-
-/**
- * No response on requests
- *
- */
-class spWxRequestMute extends spWxRequest
-{
-    public function __construct(array $message)
-    {
-        # pass
-    }
-
-    public function response()
-    {
-        # pass
-    }
-}
-
-/**
- * Token 验证消息
- */
-class spWxRequestTokenValidation extends spWxRequest
-{
-    private $echostr;
-
-    public function __construct(array $message)
-    {
-        $this->echostr   = $message['echostr'];
-    }
-
-    public function response()
-    {
-        echo $this->echostr;
-    }
-}
-
-/**
- * 微信响应结构
- */
-abstract class spWxResponse
-{
-    protected $from_username;
-    protected $to_username;
-    protected $create_time;
-    protected $msg_type;
-    protected $func_flag = 0;
-
-
-    public function __construct($from_username, $to_username)
-    {
-        $this->from_username = $from_username;
-        $this->to_username = $to_username;
-        $this->create_time = time();
-    }
-
-    public function setFuncFlag($func_flag)
-    {
-        $this->func_flag = (int) $func_flag;
-    }
-
-    abstract protected function getMessage();
-
-    public function __toString()
-    {
-        $message = $this->getMessage();
-
-        $string = <<<MESSAGE
-<xml>
-<ToUserName><![CDATA[{$this->from_username}]]></ToUserName>
-<FromUserName><![CDATA[{$this->to_username}]]></FromUserName>
-<CreateTime>{$this->create_time}</CreateTime>
-<MsgType><![CDATA[{$this->msg_type}]]></MsgType>
-{$message}
-<FuncFlag>{$this->func_flag}</FuncFlag>
-</xml>
-MESSAGE;
-
-        return $string;
-    }
-}
-
-/**
- * 微信文本消息响应
- */
-class spWxResponseText extends spWxResponse
-{
-    protected $msg_type = 'text';
-    protected $content = '';
-    public function setContent($content)
-    {
-        $this->content = $content;
-    }
-    protected function getMessage()
-    {
-        return "<Content><![CDATA[{$this->content}]]></Content>";
-    }
-}
-
-/**
- * 微信音乐消息响应
- *
- */
-class spWxResponseMusic extends spWxResponse
-{
-    protected $msg_type = 'music';
-    protected $title = '';
-    protected $description = '';
-    protected $music_url = '';
-    protected $hq_music_url = '';
-
-    public function setTitle($title)
-    {
-        $this->title = $title;
-    }
-    public function setDescription($description)
-    {
-        $this->description = $description;
-    }
-    public function setMusicUrl($music_url)
-    {
-        $this->music_url = $music_url;
-    }
-    public function setHQMusicUrl($hq_music_url)
-    {
-        $this->hq_music_url = $hq_music_url;
-    }
-    protected function getMessage()
-    {
-        return <<<MUSIC
-<Music>
-<Title><![CDATA[{$this->title}]]></Title>
-<Description><![CDATA[{$this->description}]]></Description>
-<MusicUrl><![CDATA[{$this->music_url}]]></MusicUrl>
-<HQMusicUrl><![CDATA[{$this->hq_music_url}]]></HQMusicUrl>
-</Music>
-MUSIC;
-
-    }
-}
-
-/**
- * 微信图文消息响应
- *
- */
-class spWxResponseNews extends spWxResponse
-{
-    protected $msg_type = 'news';
-    protected $articles = array();
-    protected $article_count = 0;
-
-    public function addArticle($title, $description, $pic_url, $url)
-    {
-        $this->articles[] = array(
-            'title'         =>  $title,
-            'description'   =>  $description,
-            'pic_url'       =>  $pic_url,
-            'url'           =>  $url,
-        );
-
-        ++$this->article_count;
-    }
-    protected function getMessage()
-    {
-        $message = "<ArticleCount>{$this->article_count}</ArticleCount>";
-        $message .= '<Articles>';
-        foreach ($this->articles as $article) {
-            $message .= <<<ARTICLE
-<item>
-<Title><![CDATA[{$article['title']}]]></Title>
-<Description><![CDATA[{$article['description']}]]></Description>
-<PicUrl><![CDATA[{$article['pic_url']}]]></PicUrl>
-<Url><![CDATA[{$article['url']}]]></Url>
-</item>
-ARTICLE;
-
-        }
-        $message .= '</Articles>';
-
-        return $message;
+        return new spWxApp(SPWX_APP_ID, SPWX_APP_SECRET);
     }
 }
 
@@ -369,13 +166,127 @@ class spWxApp
         $this->app_secret = $app_secret;
     }
 
-    public function api_getAccessToken()
+    protected function getAccessToken()
     {
-        $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->app_id.'&secret='.$this->app_secret;
+        $token_cache_key = 'app_access_token';
 
-        var_dump(file_get_contents($url));
+        $token = spWxCache::get($token_cache_key);
+        if (!$token) {
+            $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->app_id.'&secret='.$this->app_secret;
+
+            $ret = spWxHttpUtil::http_get($url);
+
+            $token = $ret['access_token'];
+            $expire = $ret['expires_in'] - 300;
+            spWxCache::set($token_cache_key, $token, $expire);
+        }
+
+        return $token;
     }
 
+    public function createMenu($class)
+    {
+        if (!is_subclass_of($class, 'spWxMenu')) {
+            throw new SPException('bad class');
+        }
+
+        $json = (new $class)->create();
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . self::getAccessToken();
+        $ret = spWxHttpUtil::http_post($url, $json);
+
+        var_dump($ret);
+
+    }
+
+}
+
+abstract class spWxMenu
+{
+    abstract public function create();
+}
+
+class spWxCache
+{
+    static protected $key_prefix = 'spwx:';
+
+    static protected function formatKey($key)
+    {
+        return self::$key_prefix . $key;
+    }
+
+    static private function redis_init()
+    {
+        static $redis = null;
+        if (empty($redis) || !$redis->ping()) {
+            $redis = new Redis();
+            $redis->connect(SPWX_REDIS_HOST, SPWX_REDIS_PORT);
+        }
+
+        return $redis;
+    }
+
+    static public function set($key, $val, $expire=0)
+    {
+        $redis = self::redis_init();
+        $key = self::formatKey($key);
+        $redis->set($key, $val);
+        if ($expire) {
+            $redis->expire($key, $expire);
+        }
+    }
+
+    static public function get($key)
+    {
+        $redis = self::redis_init();
+        $key = self::formatKey($key);
+        return $redis->get($key);
+    }
+}
+
+
+class spWxHttpUtil
+{
+
+    static private function http_init()
+    {
+        $ch = null;
+        if (empty($ch)) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Autohello');
+
+        }
+
+        return $ch;
+    }
+
+    static public function http_get($url)
+    {
+        $ch = self::http_init();
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HTTPGET, 1);
+        curl_setopt($ch, CURLOPT_POST, 0);
+
+        $ret = curl_exec($ch);
+
+        return json_decode($ret, true);
+    }
+
+    static public function http_post($url, array $data)
+    {
+        $ch = self::http_init();
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE));
+        curl_setopt($ch, CURLOPT_HTTPGET, 0);
+
+        $ret = curl_exec($ch);
+
+        return json_decode($ret, true);
+    }
 }
 
 if (!class_exists('SPException')) {
