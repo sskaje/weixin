@@ -25,11 +25,11 @@ abstract class spWxRequest
 
         $token = SPWX_API_TOKEN;
         $tmpArr = array($token, $_GET['timestamp'], $_GET['nonce']);
-        sort($tmpArr);
+        sort($tmpArr, SORT_STRING);
         $tmpStr = implode($tmpArr);
         $tmpStr = sha1($tmpStr);
 
-        if ($tmpStr == $_GET['signature']) {
+        if ($tmpStr === $_GET['signature']) {
             return true;
         } else {
             throw new spWxException('Invalid Signature');
@@ -68,7 +68,6 @@ class spWxRequestTokenValidation extends spWxRequest
 
     public function response()
     {
-        $this->checkSig();
         echo $this->echostr;
     }
 }

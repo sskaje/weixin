@@ -154,6 +154,7 @@ class spWxMessage
         }
 
         $object = new $class($message);
+        $object->checkSig();
         return $object->response();
     }
 
