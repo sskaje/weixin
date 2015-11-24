@@ -1,5 +1,9 @@
 <?php
-
+/**
+ * 微信响应管理
+ *
+ * @author sskaje http://sskaje.me/
+ */
 
 /**
  * 微信响应结构

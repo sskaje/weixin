@@ -1,4 +1,9 @@
 <?php
+/**
+ * 微信请求处理
+ *
+ * @author sskaje http://sskaje.me/
+ */
 
 /**
  * 请求基类
@@ -12,10 +17,10 @@ abstract class spWxRequest
     final public function checkSig()
     {
         if (!defined('SPWX_API_TOKEN')) {
-            throw new SPException('SPWX_API_TOKEN not defined');
+            throw new spWxException('SPWX_API_TOKEN not defined');
         }
         if (!isset($_GET['signature']) || !isset($_GET['timestamp']) || !isset($_GET['nonce'])) {
-            throw new SPException('Missing params');
+            throw new spWxException('Missing params');
         }
 
         $token = SPWX_API_TOKEN;
@@ -27,7 +32,7 @@ abstract class spWxRequest
         if ($tmpStr == $_GET['signature']) {
             return true;
         } else {
-            throw new SPException('Invalid Signature');
+            throw new spWxException('Invalid Signature');
         }
     }
 }
@@ -68,7 +73,9 @@ class spWxRequestTokenValidation extends spWxRequest
     }
 }
 
-
+/**
+ * 默认请求处理
+ */
 class spWxRequestDefault extends spWxRequest
 {
     protected $message;
@@ -90,11 +97,11 @@ class spWxRequestDefault extends spWxRequest
         } else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
             $msg->setContent('你发送了一张图片，图片地址是：' . $this->message['pic_url']);
         } else if ($this->message['msg_type'] == spWxMessage::REQUEST_LOCATION) {
-            $msg->setContent('你发送了一个坐标，地址是：('.$this->message['geo']['latitude'].', '.$this->message['geo']['longitude'].')');
+            $msg->setContent('你发送了一个坐标，地址是：('.$this->message['latitude'].', '.$this->message['longitude'].')');
         } else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
-            $msg->setContent('你发送了一个链接，地址是：' . $this->message['link']['url']);
+            $msg->setContent('你发送了一个链接，地址是：' . $this->message['url']);
         } else if ($this->message['msg_type'] == spWxMessage::REQUEST_EVENT) {
-            $msg->setContent('你发送了一个事件，类型是：' . $this->message['event']['event']);
+            $msg->setContent('你发送了一个事件，类型是：' . $this->message['event']);
         } else {
             $msg->setContent('为什么你会发送这样的消息？');
 
