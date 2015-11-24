@@ -53,6 +53,28 @@ MESSAGE;
 /**
  * 微信文本消息响应
  */
+class spWxResponsePlain extends spWxResponse
+{
+    protected $msg_type = 'text';
+    protected $message = '';
+    public function setMessage($message)
+    {
+        $this->message = $message;
+    }
+    protected function getMessage()
+    {
+        return $this->message;
+    }
+
+    public function __toString()
+    {
+        return $this->message;
+    }
+}
+
+/**
+ * 微信文本消息响应
+ */
 class spWxResponseText extends spWxResponse
 {
     protected $msg_type = 'text';

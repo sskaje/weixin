@@ -8,6 +8,8 @@
 
 require(__DIR__ . '/error.class.php');
 require(__DIR__ . '/utility.class.php');
+require(__DIR__ . '/crypto.class.php');
+require(__DIR__ . '/transport.class.php');
 require(__DIR__ . '/weixin.class.php');
 require(__DIR__ . '/request.class.php');
 require(__DIR__ . '/response.class.php');

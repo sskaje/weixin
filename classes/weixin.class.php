@@ -43,13 +43,7 @@ class spWxMessage
                 );
             }
         } else {
-            $input = file_get_contents('php://input');
-
-            file_put_contents(
-                '/tmp/wxapi.log',
-                "{$_SERVER['QUERY_STRING']}\n{$input}\n\n",
-                FILE_APPEND
-            );
+            $input = spWxTransport::Input();
 
             $postObj = simplexml_load_string($input, 'SimpleXMLElement', LIBXML_NOCDATA);
 

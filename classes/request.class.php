@@ -68,7 +68,9 @@ class spWxRequestTokenValidation extends spWxRequest
 
     public function response()
     {
-        echo $this->echostr;
+        $msg = new spWxResponsePlain('', '');
+        $msg->setMessage($this->echostr);
+        spWxTransport::Output($msg);
     }
 }
 
@@ -103,11 +105,9 @@ class spWxRequestDefault extends spWxRequest
             $msg->setContent('你发送了一个事件，类型是：' . $this->message['event']);
         } else {
             $msg->setContent('为什么你会发送这样的消息？');
-
         }
 
-        echo (string) $msg;
-        exit;
+        spWxTransport::Output($msg);
     }
 }
 

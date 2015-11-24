@@ -63,8 +63,7 @@ class MHRequestDefault extends spWxRequest
             );
             $msg->setContent("我猜你是想知道我在哪儿？\n我还是给你我的联系方式吧。\n\n");
 
-            echo (string) $msg;
-            exit;
+            spWxTransport::Output($msg);
             #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
             #$msg->setContent('你发送了一张图片，图片地址是：' . $this->message['pic_url']);
             #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
@@ -76,8 +75,7 @@ class MHRequestDefault extends spWxRequest
                 $this->message['to_username']
             );
             $msg->setContent("我不懂你在说什么啊\n\n" );
-            echo (string) $msg;
-            exit;
+            spWxTransport::Output($msg);
         }
     }
 }
