@@ -19,8 +19,9 @@ define('SPWX_APP_AESKEY', '');
 /**
  * APP Redis
  */
-define('SPWX_REDIS_HOST', '127.0.0.1');
-define('SPWX_REDIS_PORT', 6379);
+define('SPWX_REDIS_HOST',    '127.0.0.1');
+define('SPWX_REDIS_PORT',    6379);
+define('SPWX_REDIS_PREFIX', 'spwx:');
 
 /**
  * Menu Management Class

@@ -11,39 +11,66 @@
  */
 class spWxCache
 {
-    static protected $key_prefix = 'spwx:';
-
-    static protected function formatKey($key)
-    {
-        return self::$key_prefix . $key;
-    }
-
     static private function redis_init()
     {
         static $redis = null;
         if (empty($redis) || !$redis->ping()) {
             $redis = new Redis();
             $redis->connect(SPWX_REDIS_HOST, SPWX_REDIS_PORT);
+            $redis->setOption(Redis::OPT_PREFIX, SPWX_REDIS_PREFIX);
         }
 
         return $redis;
     }
 
+    /**
+     * set
+     *
+     *
+     * @param string $key
+     * @param string $val
+     * @param int    $expire
+     * @return bool
+     */
     static public function set($key, $val, $expire=0)
     {
         $redis = self::redis_init();
-        $key = self::formatKey($key);
-        $redis->set($key, $val);
-        if ($expire) {
+        $ret = $redis->set($key, $val);
+        if ($ret && $expire) {
             $redis->expire($key, $expire);
         }
+        return $ret;
     }
 
+    /**
+     * get
+     *
+     * @param string $key
+     * @return bool|string
+     */
     static public function get($key)
     {
         $redis = self::redis_init();
-        $key = self::formatKey($key);
         return $redis->get($key);
+    }
+
+    /**
+     * add
+     * key存在时返回失败
+     *
+     * @param string $key
+     * @param string $val
+     * @param int    $expire
+     * @return bool
+     */
+    static public function add($key, $val, $expire=3600)
+    {
+        $redis = self::redis_init();
+        $ret = $redis->setnx($key, $val);
+        if ($ret && $expire) {
+            $redis->expire($key, $expire);
+        }
+        return $ret;
     }
 }
 
