@@ -1,5 +1,6 @@
 <?php
 
+require(__DIR__ . '/client.php');
 
 /**
  * App.php访问需要的密钥
@@ -14,10 +15,8 @@ define('SPWX_APP_NAME', 'example');
  */
 define('SPWX_API_URL', 'http://wx.sskaje.me/app.php');
 
-require(__DIR__ . '/client.php');
 
-
-$client = new spWxClient();
+$client = new spWxClient(SPWX_APP_NAME, SPWX_AUTH_KEY, SPWX_API_URL);
 
 $ret = $client->app('user_info', ['']);
 

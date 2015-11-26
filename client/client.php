@@ -5,23 +5,24 @@
  * @author sskaje http://sskaje.me/
  */
 
-
-/**
- * App.php访问需要的密钥
- */
-defined('SPWX_AUTH_KEY') || define('SPWX_AUTH_KEY', '');
-/**
- * App Name
- */
-defined('SPWX_APP_NAME') || define('SPWX_APP_NAME', '');
-/**
- * API URL
- */
-defined('SPWX_API_URL') || define('SPWX_API_URL', 'http://wx.sskaje.me/app.php');
-
 class spWxClient
 {
     const MAGIC = 'sskaje';
+
+    protected $app_url = 'http://wx.sskaje.me/app.php';
+
+    protected $app_name;
+    protected $app_key;
+
+    public function __construct($app_name, $app_key, $app_url='')
+    {
+        $this->app_name = $app_name;
+        $this->app_key  = $app_key;
+
+        if ($app_url) {
+            $this->app_url = $app_url;
+        }
+    }
 
     public function oauth($action, array $params)
     {
@@ -36,10 +37,10 @@ class spWxClient
     protected function call($op, $action, array $params)
     {
         $ts = time();
-        $url = SPWX_API_URL;
-        $url .= '?app=' . SPWX_APP_NAME;
+        $url = $this->app_url;
+        $url .= '?app=' . $this->app_name;
         $url .= '&ts=' . $ts;
-        $url .= '&password=' . $this->sign(SPWX_APP_NAME, $ts);
+        $url .= '&password=' . $this->sign($this->app_name, $ts);
         $url .= '&op=' . $op;
         $url .= '&action=' . $action;
 
@@ -73,10 +74,10 @@ class spWxClient
 
     protected function sign($app, $ts)
     {
-        if (SPWX_AUTH_KEY === '') {
+        if ($this->app_key === '') {
             return '';
         } else {
-            return md5(self::MAGIC . SPWX_AUTH_KEY . $app . $ts);
+            return md5(self::MAGIC . $this->app_key . $app . $ts);
         }
     }
 }
