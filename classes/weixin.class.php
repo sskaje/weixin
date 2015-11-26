@@ -249,8 +249,7 @@ class spWxApp
         $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . self::getAccessToken();
         $ret = spWxHttpUtil::http_post($url, $json);
 
-        var_dump($ret);
-
+        return $ret;
     }
 
     /**
@@ -383,7 +382,7 @@ class spWxApp
      * @return bool|mixed|string
      * @throws \spWxException
      */
-    public function getJsapiTicket($request_url = '', $type='jsapi')
+    public function getJSSDKTicket($request_url = '', $type='jsapi')
     {
         $token = $this->getAccessToken();
         $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type='.$type.'&access_token='.$token;

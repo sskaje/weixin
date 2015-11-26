@@ -24,16 +24,38 @@ class spWxClient
         }
     }
 
+    /**
+     * 调用oauth接口
+     *
+     * @param string $action
+     * @param array  $params
+     * @return mixed
+     */
     public function oauth($action, array $params)
     {
         return $this->call('oauth', $action, $params);
     }
 
+    /**
+     * 调用app接口
+     *
+     * @param string $action
+     * @param array  $params
+     * @return mixed
+     */
     public function app($action, array $params)
     {
         return $this->call('app', $action, $params);
     }
 
+    /**
+     * 远程调用
+     *
+     * @param string $op
+     * @param string $action
+     * @param array  $params
+     * @return mixed
+     */
     protected function call($op, $action, array $params)
     {
         $ts = time();
@@ -54,10 +76,11 @@ class spWxClient
     /**
      * Perform http post
      *
+     * @param string $url
      * @param string $data
      * @return mixed
      */
-    private function post($url, $data)
+    protected function post($url, $data)
     {
         static $curl = null;
         if (!$curl) {
@@ -72,6 +95,13 @@ class spWxClient
         return curl_exec($curl);
     }
 
+    /**
+     * 签名
+     *
+     * @param string $app
+     * @param string $ts
+     * @return string
+     */
     protected function sign($app, $ts)
     {
         if ($this->app_key === '') {

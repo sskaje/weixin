@@ -25,14 +25,11 @@ class spWxOAuth
      * @param string   $redirect_uri
      * @param bool     $qrlogin         是否二维码登录
      * @param string   $scope           snsapi_login, snsapi_base, snsapi_userinfo  网页应用只有 snsapi_login, 微信内嵌用 base/userinfo
-     * @param string & $state
+     * @param string   $state
      * @return string
      */
-    public function getLoginUrl($redirect_uri, $qrlogin=false, $scope='snsapi_login', & $state=null)
+    public function getLoginUrl($redirect_uri, $qrlogin=false, $scope='snsapi_login', $state='STATE')
     {
-        if (!isset($state)) {
-            $state = md5(uniqid(rand(), true));
-        }
         if ($qrlogin) {
             $url = 'https://open.weixin.qq.com/connect/qrconnect';
         } else {

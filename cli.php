@@ -33,7 +33,8 @@ $app = spWeixin::App();
 if ($command == 'create_menu') {
     $menu_class = SPWX_MENU_CLASS;
 
-    $app->createMenu($menu_class);
+    $ret = $app->createMenu($menu_class);
+    var_dump($ret);
 }
 
 
