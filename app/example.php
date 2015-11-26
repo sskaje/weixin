@@ -15,6 +15,10 @@ define('SPWX_APP_SECRET', '');
  * APP encodingAESKey
  */
 define('SPWX_APP_AESKEY', '');
+/**
+ * App.php访问需要的密钥
+ */
+define('SPWX_AUTH_KEY',   '');
 
 /**
  * APP Redis

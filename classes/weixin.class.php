@@ -10,15 +10,38 @@
  */
 class spWeixin
 {
+    /**
+     * 创建 spWxApp 对象
+     *
+     * @return \spWxApp
+     */
     static public function App()
     {
         return new spWxApp(SPWX_APP_ID, SPWX_APP_SECRET);
     }
 
+    /**
+     * 运行Message API
+     *
+     * @return int
+     * @throws \spWxException
+     */
     static public function Api()
     {
         return spWxMessage::MessageAPI();
     }
+
+    /**
+     * 创建 spWxOAuth 对象
+     *
+     * @return \spWxOAuth
+     */
+    static public function OAuth()
+    {
+        return new spWxOAuth(SPWX_APP_ID, SPWX_APP_SECRET);
+    }
+
+
 }
 
 /**
@@ -195,6 +218,12 @@ class spWxApp
         $this->app_secret = $app_secret;
     }
 
+    protected function delAccessToken()
+    {
+        $token_cache_key = 'app_access_token';
+        return spWxCache::del($token_cache_key);
+    }
+
     protected function getAccessToken()
     {
         $token_cache_key = 'app_access_token';
@@ -213,12 +242,8 @@ class spWxApp
         return $token;
     }
 
-    public function createMenu($class)
+    public function createMenu(spWxMenu $class)
     {
-        if (!is_subclass_of($class, 'spWxMenu')) {
-            throw new spWxException('bad class');
-        }
-
         $json = (new $class)->create();
 
         $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . self::getAccessToken();
@@ -226,6 +251,178 @@ class spWxApp
 
         var_dump($ret);
 
+    }
+
+    /**
+     * 客服消息
+     *
+     * @param string $openid
+     * @param string $type
+     * @param array  $data
+     * @return mixed
+     */
+    public function sendMessage($openid, $type, array $data)
+    {
+        $send = [];
+        $send['touser'] = $openid;
+        $send['msgtype'] = $type;
+        $send += $data;
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=' . $this->getAccessToken();
+
+        $result = spWxHttpUtil::http_post($url, $send);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->sendMessage($openid, $type, $data);
+        }
+
+        file_put_contents('/tmp/wx_notice', $url . "\n" . var_export($send, true) . "\n\n" . var_export($result, true) . "\n\n\n", FILE_APPEND);
+
+        return $result;
+    }
+
+    /**
+     * 取OpenID列表
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function user_getlist()
+    {
+        $access_token = $this->getAccessToken();
+
+        $openids = [];
+
+        $next_openid = '';
+        do {
+            RETRY:
+            $url = "https://api.weixin.qq.com/cgi-bin/user/get?access_token=".urlencode($access_token)."&next_openid=" . $next_openid;
+            $ret = spWxHttpUtil::http_get($url);
+            if (isset($ret['errcode'])) {
+                if ($ret['errcode'] == 40001) {
+                    $this->delAccessToken();
+                    $access_token = $this->getAccessToken();
+
+                    goto RETRY;
+                } else {
+                    throw new Exception($ret['errmsg'], $ret['errcode']);
+                }
+            }
+
+            if (!empty($ret['data']['openid'])) {
+                $openids = array_merge($openids, $ret['data']['openid']);
+            }
+
+            $next_openid = $ret['next_openid'];
+
+        } while ($next_openid);
+
+        return $openids;
+    }
+
+    /**
+     * 单条用户信息
+     *
+     * @param string $openid
+     * @return bool|mixed
+     * @throws \Exception
+     */
+    public function user_info($openid)
+    {
+        $url = 'https://api.weixin.qq.com/cgi-bin/user/info?access_token=' . $this->getAccessToken()
+               . '&openid=' . $openid;
+
+        $result = spWxHttpUtil::http_get($url);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->user_info($openid);
+        }
+
+        return $result;
+    }
+
+    /**
+     * 批量取用户信息
+     *
+     * @param array $openids
+     * @return mixed
+     * @throws \Exception
+     */
+    public function user_info_batch(array $openids)
+    {
+        $user_list = [
+            'user_list' =>  [],
+        ];
+
+        foreach ($openids as $openid) {
+            $user_list['user_list'][] = [
+                'openid'    =>  $openid,
+                'lang'      =>  'zh-CN',
+            ];
+        }
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/user/info/batchget?access_token=' . $this->getAccessToken();
+
+        $result = spWxHttpUtil::http_post($url, $user_list);
+        if (isset($result['errcode']) && $result['errcode'] == 40001) {
+
+            $this->delAccessToken();
+            return $this->user_info_batch($openids);
+        }
+
+        return $result['user_info_list'];
+    }
+
+    /**
+     * JS SDK ticket
+     *
+     * @param string $request_url
+     * @param string $type             jsapi, wx_card
+     * @return bool|mixed|string
+     * @throws \spWxException
+     */
+    public function getJsapiTicket($request_url = '', $type='jsapi')
+    {
+        $token = $this->getAccessToken();
+        $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type='.$type.'&access_token='.$token;
+
+        $cache_key = 'wx:ticket:'.$type.':' . md5($url);
+
+        $jsapi_ticket = spWxCache::get($cache_key);
+        $jsapi_ticket = json_decode($jsapi_ticket, true);
+
+        if(!$jsapi_ticket) {
+            $jsapi_ticket = spWxHttpUtil::http_get($url);
+
+            if (isset($jsapi_ticket['errcode']) && $jsapi_ticket['errcode'] == '40001') {
+                $this->delAccessToken();
+                return $this->getJsapiTicket($request_url);
+            }
+
+            if (!isset($jsapi_ticket['ticket']) || !isset($jsapi_ticket['expires_in'])) {
+                throw new spWxException('服务器故障，请稍后重试', 9210201);
+            }
+            spWxCache::set($cache_key, json_encode($jsapi_ticket), $jsapi_ticket['expires_in'] - 300);
+        }
+
+        $noncestr  = md5(uniqid('sskaje', true));
+
+        $jsapi_ticket['noncestr'] = $noncestr;
+        $jsapi_ticket['timestamp'] = time();
+
+        $signstr = 'jsapi_ticket='.$jsapi_ticket['ticket'].'&noncestr='.$jsapi_ticket['noncestr'].'&timestamp='.$jsapi_ticket['timestamp'];
+        if(empty($request_url)) {
+            $signstr .= '&url=' . 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        } else {
+            $signstr .= '&url=' . $request_url;
+        }
+        $jsapi_ticket['signature'] = sha1($signstr);
+        $jsapi_ticket['signstr'] = $signstr;
+        $jsapi_ticket['appid'] = $this->app_id;
+
+        return $jsapi_ticket;
     }
 
 }

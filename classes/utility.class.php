@@ -28,7 +28,7 @@ class spWxCache
      *
      *
      * @param string $key
-     * @param string $val
+     * @param mixed  $val
      * @param int    $expire
      * @return bool
      */
@@ -59,7 +59,7 @@ class spWxCache
      * key存在时返回失败
      *
      * @param string $key
-     * @param string $val
+     * @param mixed  $val
      * @param int    $expire
      * @return bool
      */
@@ -71,6 +71,19 @@ class spWxCache
             $redis->expire($key, $expire);
         }
         return $ret;
+    }
+
+    /**
+     * del
+     *
+     *
+     * @param string $key
+     * @return int
+     */
+    static public function del($key)
+    {
+        $redis = self::redis_init();
+        return $redis->del($key);
     }
 }
 

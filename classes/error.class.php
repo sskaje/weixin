@@ -11,6 +11,11 @@
 class spWxError
 {
 
+    /**
+     * Default Exception Handler
+     *
+     * @param $exception
+     */
     static public function ExceptionHandler($exception)
     {
         try {
@@ -21,16 +26,28 @@ class spWxError
                 exit;
             } else {
                 file_put_contents('/tmp/wxerror.log', $e->getMessage() . '#' . $e->getCode() . "\n", FILE_APPEND);
+
+                echo json_encode([
+                    'code'   =>  $e->getCode(),
+                    'msg'    =>  $e->getMessage(),
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
             }
         }
     }
 
     /**
      * 启用Exception Handler
+     *
+     * @param callback $handler
      */
-    static public function SetExceptionHandler()
+    static public function SetExceptionHandler($handler=null)
     {
-        set_exception_handler([__CLASS__, 'ExceptionHandler']);
+        if (is_callable($handler)) {
+            set_exception_handler($handler);
+        } else {
+            set_exception_handler([__CLASS__, 'ExceptionHandler']);
+        }
     }
 
     static public $ERROR_CODE = [
