@@ -30,10 +30,16 @@ $command = strtolower($argv[2]);
 $app = spWeixin::App();
 
 
-if ($command == 'create_menu') {
+if ($command == 'menu_create') {
     $menu_class = SPWX_MENU_CLASS;
 
-    $ret = $app->createMenu($menu_class);
+    $ret = $app->menu_create(new $menu_class());
+    var_dump($ret);
+} else if ($command == 'menu_get') {
+    $ret = $app->menu_get();
+    var_dump($ret);
+} else if ($command == 'menu_delete') {
+    $ret = $app->menu_delete();
     var_dump($ret);
 }
 
@@ -63,7 +69,10 @@ Usage:
 
         App Name:               ^[A-Za-z0-9]+\$
         Commands:
-            create_menu         CreateMenu
+            menu_create         create menu
+            menu_get            get menu json
+            menu_delete         delete menu
+
 
 
 USAGE;

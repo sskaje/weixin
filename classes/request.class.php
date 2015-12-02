@@ -11,8 +11,34 @@
  */
 abstract class spWxRequest
 {
+    /**
+     * @var spWxRequestObject|spWxRequestValidationObject|spWxRequestTextObject|spWxRequestImageObject|spWxRequestLocationObject|spWxRequestLinkObject|spWxRequestEventObject|spWxRequestVoiceObject|spWxRequestVideoObject
+     */
+    protected $message;
+
+    public function __construct(spWxRequestObject $message)
+    {
+        $this->message = $message;
+    }
+
     abstract public function response();
-    abstract public function __construct(array $message);
+
+    /**
+     * @param string $type
+     * @return spWxResponse|spWxResponsePlain|spWxResponseText|spWxResponseImage|spWxResponseVoice|spWxResponseVideo|spWxResponseMusic|spWxResponseNews
+     * @throws \spWxException
+     */
+    final protected function createMessage($type)
+    {
+        if (!is_subclass_of($type, 'spWxResponse')) {
+            throw new spWxException('Invalid response type : ' . $type);
+        }
+
+        return new $type(
+            $this->message->from_username,
+            $this->message->to_username
+        );
+    }
 
     final public function checkSig()
     {
@@ -43,10 +69,6 @@ abstract class spWxRequest
  */
 class spWxRequestMute extends spWxRequest
 {
-    public function __construct(array $message)
-    {
-        # pass
-    }
 
     public function response()
     {
@@ -59,17 +81,15 @@ class spWxRequestMute extends spWxRequest
  */
 class spWxRequestTokenValidation extends spWxRequest
 {
-    private $echostr;
-
-    public function __construct(array $message)
-    {
-        $this->echostr   = $message['echostr'];
-    }
+    /**
+     * @var spWxRequestValidationObject
+     */
+    protected $message;
 
     public function response()
     {
         $msg = new spWxResponsePlain('', '');
-        $msg->setMessage($this->echostr);
+        $msg->setMessage($this->message->echostr);
         spWxTransport::Output($msg);
     }
 }
@@ -79,36 +99,118 @@ class spWxRequestTokenValidation extends spWxRequest
  */
 class spWxRequestDefault extends spWxRequest
 {
+    /**
+     * @var \spWxRequestObject
+     */
     protected $message;
-
-    public function __construct(array $message)
-    {
-        $this->message = $message;
-    }
 
     public function response()
     {
-        $msg = new spWxResponseText(
-            $this->message['from_username'],
-            $this->message['to_username']
-        );
+        $msg = $this->createMessage(spWxMessage::RESPONSE_TEXT);
 
-        if ($this->message['msg_type'] == spWxMessage::REQUEST_TEXT) {
-            $msg->setContent('你输入了文本消息，消息内容是：' . $this->message['content']);
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
-            $msg->setContent('你发送了一张图片，图片地址是：' . $this->message['pic_url']);
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_LOCATION) {
-            $msg->setContent('你发送了一个坐标，地址是：('.$this->message['latitude'].', '.$this->message['longitude'].')');
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
-            $msg->setContent('你发送了一个链接，地址是：' . $this->message['url']);
-        } else if ($this->message['msg_type'] == spWxMessage::REQUEST_EVENT) {
-            $msg->setContent('你发送了一个事件，类型是：' . $this->message['event']);
+        if ($this->message->msg_type == spWxMessage::REQUEST_TEXT) {
+            $msg->setContent('你输入了文本消息，消息内容是：' . $this->message->content);
+        } else if ($this->message->msg_type == spWxMessage::REQUEST_IMAGE) {
+            $msg->setContent('你发送了一张图片，图片地址是：' . $this->message->pic_url);
+        } else if ($this->message->msg_type == spWxMessage::REQUEST_LOCATION) {
+            $msg->setContent('你发送了一个坐标，地址是：('.$this->message->latitude.', '.$this->message->longitude.')');
+        } else if ($this->message->msg_type == spWxMessage::REQUEST_URL || $this->message->msg_type == spWxMessage::REQUEST_LINK) {
+            $msg->setContent('你发送了一个链接，地址是：' . $this->message->url);
+        } else if ($this->message->msg_type == spWxMessage::REQUEST_EVENT) {
+            $msg->setContent('你发送了一个事件，类型是：' . $this->message->event);
         } else {
             $msg->setContent('为什么你会发送这样的消息？');
         }
 
         spWxTransport::Output($msg);
     }
+}
+
+/**
+ * Class spWxRequestObjectBase
+ */
+class spWxRequestObjectBase
+{
+    public function __construct(array $message)
+    {
+        foreach ($message as $k=>$v) {
+            $this->$k = $v;
+        }
+    }
+
+    public function __get($key)
+    {
+        return $this->$key;
+    }
+
+    public function __set($key, $val)
+    {
+        # pass
+    }
+    public function __isset($key)
+    {
+        return property_exists($this, $key);
+    }
+    public function __unset($key)
+    {
+        # pass
+    }
+}
+
+class spWxRequestValidationObject extends spWxRequestObjectBase
+{
+    protected $echostr;
+}
+
+class spWxRequestObject extends spWxRequestObjectBase
+{
+    protected $from_username;
+    protected $to_username;
+    protected $create_time;
+    protected $msg_id;
+    protected $msg_type;
+}
+
+class spWxRequestTextObject extends spWxRequestObject
+{
+    protected $content;
+}
+
+class spWxRequestImageObject extends spWxRequestObject
+{
+    protected $pic_url;
+    protected $media_id;
+}
+
+class spWxRequestLocationObject extends spWxRequestObject
+{
+    protected $latitiude;
+    protected $longitude;
+    protected $scale;
+    protected $label;
+}
+class spWxRequestLinkObject extends spWxRequestObject
+{
+    protected $title;
+    protected $description;
+    protected $url;
+}
+class spWxRequestEventObject extends spWxRequestObject
+{
+    protected $event;
+    protected $event_key;
+}
+
+class spWxRequestVoiceObject extends spWxRequestObject
+{
+    protected $media_id;
+    protected $format;
+    protected $recognition;
+}
+class spWxRequestVideoObject extends spWxRequestObject
+{
+    protected $media_id;
+    protected $thumb_media_id;
 }
 
 

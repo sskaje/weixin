@@ -135,4 +135,20 @@ class spWxHttpUtil
     }
 }
 
+/**
+ * 用户状态
+ */
+class spWxUserStatus
+{
+    static public function Get($openid)
+    {
+        return (int) spWxCache::get('userstatus:' . $openid);
+    }
+
+    static public function Set($openid, $status, $expire=600)
+    {
+        return spWxCache::set('userstatus:'.  $openid, (int) $status, (int) $expire);
+    }
+}
+
 # EOF

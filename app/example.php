@@ -49,36 +49,28 @@ $GLOBALS['REQUEST_HANDLERS'] = [
 
 class MHRequestDefault extends spWxRequest
 {
+    /**
+     * @var spWxRequestObject
+     */
     protected $message;
-
-    public function __construct(array $message)
-    {
-        $this->message = $message;
-    }
 
     public function response()
     {
 
-        if ($this->message['msg_type'] == spWxMessage::REQUEST_LOCATION) {
-            #$msg->setContent('你发送了一个坐标，地址是：('.$this->message['latitude'].', '.$this->message['longitude'].')');
+        if ($this->message->msg_type == spWxMessage::REQUEST_LOCATION) {
+            #$msg->setContent('你发送了一个坐标，地址是：('.$this->message->latitude.', '.$this->message->longitude.')');
 
-            $msg = new spWxResponseText(
-                $this->message['from_username'],
-                $this->message['to_username']
-            );
+            $msg = $this->createMessage(spWxMessage::RESPONSE_TEXT);
             $msg->setContent("我猜你是想知道我在哪儿？\n我还是给你我的联系方式吧。\n\n");
 
             spWxTransport::Output($msg);
-            #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_IMAGE) {
-            #$msg->setContent('你发送了一张图片，图片地址是：' . $this->message['pic_url']);
-            #} else if ($this->message['msg_type'] == spWxMessage::REQUEST_URL) {
-            #$msg->setContent('你发送了一个链接，地址是：' . $this->message['url']);
+            #} else if ($this->message->msg_type == spWxMessage::REQUEST_IMAGE) {
+            #$msg->setContent('你发送了一张图片，图片地址是：' . $this->message->pic_url);
+            #} else if ($this->message->msg_type == spWxMessage::REQUEST_URL) {
+            #$msg->setContent('你发送了一个链接，地址是：' . $this->message->url);
         } else {
+            $msg = $this->createMessage(spWxMessage::RESPONSE_TEXT);
 
-            $msg = new spWxResponseText(
-                $this->message['from_username'],
-                $this->message['to_username']
-            );
             $msg->setContent("我不懂你在说什么啊\n\n" );
             spWxTransport::Output($msg);
         }

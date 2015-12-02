@@ -60,9 +60,9 @@ class spWxMessage
                 # ping/pong
                 return self::ProcessRequest(
                     self::REQUEST_VALIDATE,
-                    array(
+                    new spWxRequestValidationObject(array(
                         'echostr'   =>  $_GET['echostr'],
-                    )
+                    ))
                 );
             }
         } else {
@@ -81,11 +81,15 @@ class spWxMessage
             switch ($message['msg_type']) {
             case self::REQUEST_TEXT:        # 文本类型消息
                 $message['content']     = (string) $postObj->Content;
+
+                $object = new spWxRequestTextObject($message);
                 break;
 
             case self::REQUEST_IMAGE:       # 图片类型消息
                 $message['pic_url']     = (string) $postObj->PicUrl;
                 $message['media_id']    = (string) $postObj->MediaId;
+
+                $object = new spWxRequestImageObject($message);
                 break;
 
             case self::REQUEST_LOCATION:    # 地理位置类型消息
@@ -95,6 +99,8 @@ class spWxMessage
                     'scale'             => (int)    $postObj->Scale,
                     'label'             => (string) $postObj->Label,
                 );
+
+                $object = new spWxRequestLocationObject($message);
                 break;
 
             case self::REQUEST_URL:          # 链接消息(old)
@@ -104,6 +110,7 @@ class spWxMessage
                     'description'       => (string) $postObj->Description,
                     'url'               => (string) $postObj->Url,
                 );
+                $object = new spWxRequestLinkObject($message);
                 break;
 
             case self::REQUEST_EVENT:        # 事件消息
@@ -111,6 +118,7 @@ class spWxMessage
                     'event'             => (string) $postObj->Event,
                     'event_key'         => (string) $postObj->EventKey,
                 );
+                $object = new spWxRequestEventObject($message);
                 break;
 
             case self::REQUEST_VOICE:        # 语音消息
@@ -119,27 +127,23 @@ class spWxMessage
                     'format'            => (string) $postObj->Format,
                     'recognition'       => (string) $postObj->Recognition,
                 );
+                $object = new spWxRequestVoiceObject($message);
                 break;
 
             case self::REQUEST_VIDEO:        # 视频
-                $message       +=  array(
-                    'media_id'          => (string) $postObj->MediaId,
-                    'thumb_media_id'    => (string) $postObj->ThumbMediaId,
-                );
-                break;
-
             case self::REQUEST_SHORTVIDEO:   # 短视频
                 $message       +=  array(
                     'media_id'          => (string) $postObj->MediaId,
                     'thumb_media_id'    => (string) $postObj->ThumbMediaId,
                 );
+                $object = new spWxRequestVideoObject($message);
                 break;
 
             default:
                 throw new spWxException('Invalid Message Type');
             }
 
-            return self::ProcessRequest($message['msg_type'], $message);
+            return self::ProcessRequest($message['msg_type'], $object);
         }
 
         return 0;
@@ -156,21 +160,30 @@ class spWxMessage
     const REQUEST_SHORTVIDEO = 'shortvideo';
     const REQUEST_LINK       = 'link';
 
+    const RESPONSE_PLAIN     = 'spWxResponsePlain';
+    const RESPONSE_TEXT      = 'spWxResponseText';
+    const RESPONSE_IMAGE     = 'spWxResponseImage';
+    const RESPONSE_VOICE     = 'spWxResponseVoice';
+    const RESPONSE_VIDEO     = 'spWxResponseVideo';
+    const RESPONSE_MUSIC     = 'spWxResponseMusic';
+    const RESPONSE_NEWS      = 'spWxResponseNews';
+
+
     /**
      * 处理消息
      *
-     * @param string $message_type
-     * @param array $message
+     * @param string                $message_type
+     * @param spWxRequestObjectBase $message_object
      * @throws spWxException
      */
-    static protected function ProcessRequest($message_type, array $message)
+    static protected function ProcessRequest($message_type, spWxRequestObjectBase $message_object)
     {
         $class = self::$MessageHandlers[$message_type];
         if (empty($class) || !class_exists($class)) {
             throw new spWxException('Invalid message handler');
         }
 
-        $object = new $class($message);
+        $object = new $class($message_object);
         $object->checkSig();
         return $object->response();
     }
@@ -242,14 +255,140 @@ class spWxApp
         return $token;
     }
 
-    public function createMenu(spWxMenu $class)
+    /**
+     * 获取回调IP
+     *
+     * @return mixed
+     */
+    public function get_callback_ip()
     {
-        $json = (new $class)->create();
+        $url = 'https://api.weixin.qq.com/cgi-bin/getcallbackip?access_token=' . $this->getAccessToken();
+        $result = spWxHttpUtil::http_get($url);
 
-        $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . self::getAccessToken();
-        $ret = spWxHttpUtil::http_post($url, $json);
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->get_callback_ip();
+        }
 
-        return $ret;
+        return $result;
+    }
+
+    /**
+     * 提交菜单
+     *
+     * @param \spWxMenu $class
+     * @return mixed
+     */
+    public function menu_create(spWxMenu $class)
+    {
+        $json = $class->create();
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . $this->getAccessToken();
+        $result = spWxHttpUtil::http_post($url, $json);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->createMenu($class);
+        }
+
+        return $result;
+    }
+
+    /**
+     * 获取菜单
+     *
+     * @return mixed
+     */
+    public function menu_get()
+    {
+        $url = 'https://api.weixin.qq.com/cgi-bin/menu/get?access_token=' . $this->getAccessToken();
+        $result = spWxHttpUtil::http_get($url);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->menu_get();
+        }
+
+        return $result;
+    }
+    /**
+     * 删除菜单
+     *
+     * @return mixed
+     */
+    public function menu_delete()
+    {
+        $url = 'https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=' . $this->getAccessToken();
+        $result = spWxHttpUtil::http_get($url);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->menu_delete();
+        }
+
+        return $result;
+    }
+
+    /**
+     * 创建QR Code
+     *
+     * @param string $action_name
+     * @param string $action_info
+     * @param int    $expire_seconds
+     * @return mixed
+     */
+    public function qrcode_create($action_name, $action_info, $expire_seconds=0)
+    {
+        $url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=' . $this->getAccessToken();
+        $data = [
+            'action_name'   =>  $action_name,
+            'action_info'   =>  $action_info,
+        ];
+        if ($expire_seconds) {
+            $data['expire_seconds'] = intval($expire_seconds);
+        }
+        $result = spWxHttpUtil::http_post($url, $data);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->qrcode_create($action_name, $action_info, $expire_seconds);
+        }
+
+        return $result;
+    }
+
+    /**
+     * 返回二维码链接
+     *
+     * @param string $ticket
+     * @return string
+     */
+    public function qrcode_url($ticket)
+    {
+        return 'https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=' . urlencode($ticket);
+    }
+
+    /**
+     * 短链接
+     *
+     * @param string $long_url
+     * @param string $action
+     * @return mixed
+     */
+    public function shorturl($long_url, $action='long2short')
+    {
+        $url = 'https://api.weixin.qq.com/cgi-bin/shorturl?access_token=' . $this->getAccessToken();
+
+        $data = ['action'=>$action, 'long_url'=>$long_url];
+
+        $result = spWxHttpUtil::http_post($url, $data);
+
+        if (isset($result['errcode']) && $result['errcode'] == '40001') {
+            $this->delAccessToken();
+            return $this->shorturl($long_url, $data);
+        }
+
+        return $result;
     }
 
     /**
@@ -422,6 +561,55 @@ class spWxApp
         $jsapi_ticket['appid'] = $this->app_id;
 
         return $jsapi_ticket;
+    }
+
+
+################################################
+#
+#   TODO: 素材管理
+#
+################################################
+
+    public function material_add($type, $is_temp=true)
+    {
+        if ($is_temp) {
+            $url = 'https://api.weixin.qq.com/cgi-bin/media/upload';
+        } else {
+            $url = 'https://api.weixin.qq.com/cgi-bin/material/add_material';
+        }
+
+        $url .= '?type='.$type.'&access_token=' . $this->getAccessToken();
+
+    }
+
+    public function material_get($media_id, $is_temp=true)
+    {
+        if ($is_temp) {
+            $url = 'https://api.weixin.qq.com/cgi-bin/media/get';
+            $url .= '?media_id='.$media_id.'&access_token=' . $this->getAccessToken();
+
+            $result = spWxHttpUtil::http_get($url);
+        } else {
+            $url = 'https://api.weixin.qq.com/cgi-bin/material/get_material';
+            $url .= '?access_token=' . $this->getAccessToken();
+
+            $result = spWxHttpUtil::http_post($url, ['media_id'=>$media_id]);
+        }
+
+        if (isset($result['errcode']) && $result['errcode'] == 40001) {
+
+            $this->delAccessToken();
+            return $this->material_get($media_id, $is_temp);
+        }
+
+        # 这个接口好奇葩...
+
+    }
+
+    public function material_del($media_id)
+    {
+        $url = 'https://api.weixin.qq.com/cgi-bin/material/del_material?access_token=' . $this->getAccessToken();
+        $data = ['media_id'=>$media_id];
     }
 
 }

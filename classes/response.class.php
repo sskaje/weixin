@@ -27,6 +27,7 @@ abstract class spWxResponse
     public function setFuncFlag($func_flag)
     {
         $this->func_flag = (int) $func_flag;
+        return $this;
     }
 
     abstract protected function getMessage();
@@ -60,6 +61,7 @@ class spWxResponsePlain extends spWxResponse
     public function setMessage($message)
     {
         $this->message = $message;
+        return $this;
     }
     protected function getMessage()
     {
@@ -82,6 +84,7 @@ class spWxResponseText extends spWxResponse
     public function setContent($content)
     {
         $this->content = $content;
+        return $this;
     }
     protected function getMessage()
     {
@@ -100,6 +103,7 @@ class spWxResponseImage extends spWxResponse
     public function setMediaId($media_id)
     {
         $this->media_id = $media_id;
+        return $this;
     }
 
     protected function getMessage()
@@ -125,6 +129,7 @@ class spWxResponseVoice extends spWxResponse
     public function setMediaId($media_id)
     {
         $this->media_id = $media_id;
+        return $this;
     }
 
     protected function getMessage()
@@ -152,14 +157,17 @@ class spWxResponseVideo extends spWxResponse
     public function setMediaId($media_id)
     {
         $this->media_id = $media_id;
+        return $this;
     }
     public function setTitle($title)
     {
         $this->title = $title;
+        return $this;
     }
     public function setDescription($description)
     {
         $this->description = $description;
+        return $this;
     }
 
     protected function getMessage()
@@ -191,18 +199,22 @@ class spWxResponseMusic extends spWxResponse
     public function setTitle($title)
     {
         $this->title = $title;
+        return $this;
     }
     public function setDescription($description)
     {
         $this->description = $description;
+        return $this;
     }
     public function setMusicUrl($music_url)
     {
         $this->music_url = $music_url;
+        return $this;
     }
     public function setHQMusicUrl($hq_music_url)
     {
         $this->hq_music_url = $hq_music_url;
+        return $this;
     }
     protected function getMessage()
     {
@@ -238,6 +250,7 @@ class spWxResponseNews extends spWxResponse
         );
 
         ++$this->article_count;
+        return $this;
     }
     protected function getMessage()
     {
