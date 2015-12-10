@@ -14,7 +14,6 @@ abstract class spWxResponse
     protected $to_username;
     protected $create_time;
     protected $msg_type;
-    protected $func_flag = 0;
 
 
     public function __construct($from_username, $to_username)
@@ -24,11 +23,6 @@ abstract class spWxResponse
         $this->create_time = time();
     }
 
-    public function setFuncFlag($func_flag)
-    {
-        $this->func_flag = (int) $func_flag;
-        return $this;
-    }
 
     abstract protected function getMessage();
 
@@ -43,11 +37,15 @@ abstract class spWxResponse
 <CreateTime>{$this->create_time}</CreateTime>
 <MsgType><![CDATA[{$this->msg_type}]]></MsgType>
 {$message}
-<FuncFlag>{$this->func_flag}</FuncFlag>
 </xml>
 MESSAGE;
 
         return $string;
+    }
+
+    final public function output()
+    {
+        spWxTransport::Output($this);
     }
 }
 

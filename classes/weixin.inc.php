@@ -6,6 +6,8 @@
  */
 
 
+date_default_timezone_set('Asia/Shanghai');
+
 require(__DIR__ . '/error.class.php');
 require(__DIR__ . '/utility.class.php');
 require(__DIR__ . '/crypto.class.php');

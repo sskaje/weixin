@@ -151,4 +151,132 @@ class spWxUserStatus
     }
 }
 
+/**
+ * 请求转发器
+ * 把当前来的API请求转发到其他地址
+ */
+class spWxRequestForwarder
+{
+    static protected $GET_FIELDS = [
+        'signature',
+        'timestamp',
+        'nonce',
+        'encrypt_type',
+        'msg_signature',
+        'echostr',
+    ];
+
+    static public function Forward($url)
+    {
+        if (strpos($url, '?')) {
+            $url .= '&';
+        } else {
+            $url .= '?';
+        }
+
+        foreach (self::$GET_FIELDS as $f) {
+            if (isset($_GET[$f])) {
+                $url .= $f . '=' . urlencode($_GET[$f]) . '&';
+            }
+        }
+
+        $post = spWxTransport::Input();
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type'=>$_SERVER['HTTP_CONTENT_TYPE']]);
+        $s = curl_exec($ch);
+        $i = curl_getinfo($ch);
+        curl_close($ch);
+
+
+        spWxLogger::Log(
+            'spWxRequestForwarder',
+            [
+                'url'    => $url,
+                'data'   => $post,
+                'result' => $s,
+                'info'   => $i,
+            ]
+        );
+
+        return $s;
+    }
+}
+
+/**
+ * Logger
+ */
+class spWxLogger
+{
+    static public function Log($msg, $var)
+    {
+        $logmsg = date("Y-m-d H:i:s\n============\n");
+        $logmsg .= trim($msg) . "\n============\n\n";
+        $logmsg .= var_export($var, true) . "\n\n============\n\n";
+
+        $file = defined('SPWX_LOG_FILE') &&
+                (
+                    (is_file(SPWX_LOG_FILE) && is_writable(SPWX_LOG_FILE)) ||
+                    is_writable(dirname(SPWX_LOG_FILE))
+                )
+            ? SPWX_LOG_FILE : '/tmp/wx.log';
+
+        return file_put_contents(
+            $file,
+            $logmsg,
+            FILE_APPEND
+        );
+    }
+
+    static public function LogHttpGet($url, $result)
+    {
+        $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+
+        $call_from = self::BuildCallFromBT($bt);
+
+        $msg = self::BuildMSGFromBT($bt) . ' Http GET';
+        self::Log(
+            $msg,
+            [
+                'call_from' =>  $call_from,
+                'url'       =>  $url,
+                'result'    =>  $result,
+            ]
+        );
+    }
+
+    static public function LogHttpPost($url, $data, $result)
+    {
+        $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+
+        $call_from = self::BuildCallFromBT($bt);
+
+        $msg = self::BuildMSGFromBT($bt) . ' Http POST';
+        self::Log(
+            $msg,
+            [
+                'call_from' =>  $call_from,
+                'url'       =>  $url,
+                'data'      =>  $data,
+                'result'    =>  $result,
+            ]
+        );
+    }
+
+    static protected function BuildMSGFromBT($bt)
+    {
+        return (isset($bt[1]['class']) ? $bt[1]['class'] . '::' : '') . $bt[1]['function'];
+    }
+
+    static protected function BuildCallFromBT($bt)
+    {
+        return $bt[0]['file'] . ':' . $bt[0]['line'] ;
+    }
+
+}
+
 # EOF

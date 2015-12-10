@@ -25,7 +25,13 @@ class spWxError
                 echo $e->getMessage() . '#' . $e->getCode() . "\n";
                 exit;
             } else {
-                file_put_contents('/tmp/wxerror.log', $e->getMessage() . '#' . $e->getCode() . "\n", FILE_APPEND);
+                spWxLogger::Log(
+                    'Exception',
+                    [
+                        'Message' => $e->getMessage(),
+                        'Code'    => $e->getCode(),
+                    ]
+                );
 
                 echo json_encode([
                     'code'   =>  $e->getCode(),

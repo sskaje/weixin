@@ -40,8 +40,6 @@ class spWeixin
     {
         return new spWxOAuth(SPWX_APP_ID, SPWX_APP_SECRET);
     }
-
-
 }
 
 /**
@@ -149,16 +147,50 @@ class spWxMessage
         return 0;
     }
 
+    /**
+     * 验证消息
+     */
     const REQUEST_VALIDATE   = -1;
+    /**
+     * 文本消息
+     */
     const REQUEST_TEXT       = 'text';
+    /**
+     * 图片消息
+     */
     const REQUEST_IMAGE      = 'image';
+    /**
+     * 地理位置消息
+     */
     const REQUEST_LOCATION   = 'location';
-    const REQUEST_URL        = 'url';
-    const REQUEST_EVENT      = 'event';
-    const REQUEST_VOICE      = 'voice';
-    const REQUEST_VIDEO      = 'video';
-    const REQUEST_SHORTVIDEO = 'shortvideo';
+    /**
+     * 链接消息
+     * 兼容老定义
+     * 以前的值是 url
+     *
+     * @deprecated
+     */
+    const REQUEST_URL        = 'link';
+    /**
+     * 链接消息
+     */
     const REQUEST_LINK       = 'link';
+    /**
+     * 语音消息
+     */
+    const REQUEST_VOICE      = 'voice';
+    /**
+     * 视频消息
+     */
+    const REQUEST_VIDEO      = 'video';
+    /**
+     * 小视频消息
+     */
+    const REQUEST_SHORTVIDEO = 'shortvideo';
+    /**
+     * 事件
+     */
+    const REQUEST_EVENT      = 'event';
 
     const RESPONSE_PLAIN     = 'spWxResponsePlain';
     const RESPONSE_TEXT      = 'spWxResponseText';
@@ -184,7 +216,7 @@ class spWxMessage
         }
 
         $object = new $class($message_object);
-        $object->checkSig();
+        $object->checkSignature();
         return $object->response();
     }
 
@@ -194,14 +226,15 @@ class spWxMessage
      * @var array
      */
     static private $MessageHandlers = array(
-        self::REQUEST_VALIDATE  =>  'spWxRequestTokenValidation',
-        self::REQUEST_TEXT      =>  '',
-        self::REQUEST_IMAGE     =>  '',
-        self::REQUEST_LOCATION  =>  '',
-        self::REQUEST_URL       =>  '',
-        self::REQUEST_EVENT     =>  '',
-        self::REQUEST_VOICE     =>  '',
-        self::REQUEST_VIDEO     =>  '',
+        self::REQUEST_VALIDATE   => 'spWxRequestTokenValidation',
+        self::REQUEST_TEXT       => '',
+        self::REQUEST_IMAGE      => '',
+        self::REQUEST_LOCATION   => '',
+        self::REQUEST_LINK       => '',
+        self::REQUEST_EVENT      => '',
+        self::REQUEST_VOICE      => '',
+        self::REQUEST_VIDEO      => '',
+        self::REQUEST_SHORTVIDEO => '',
     );
 
     /**
@@ -231,12 +264,22 @@ class spWxApp
         $this->app_secret = $app_secret;
     }
 
+    /**
+     * 从缓存里删除Access Token
+     *
+     * @return int
+     */
     protected function delAccessToken()
     {
         $token_cache_key = 'app_access_token';
         return spWxCache::del($token_cache_key);
     }
 
+    /**
+     * 取Access Token
+     *
+     * @return bool|string
+     */
     protected function getAccessToken()
     {
         $token_cache_key = 'app_access_token';
@@ -245,32 +288,16 @@ class spWxApp
         if (!$token) {
             $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid='.$this->app_id.'&secret='.$this->app_secret;
 
-            $ret = spWxHttpUtil::http_get($url);
+            $result = spWxHttpUtil::http_get($url);
 
-            $token = $ret['access_token'];
-            $expire = $ret['expires_in'] - 300;
+            spWxLogger::LogHttpGet($url, $result);
+
+            $token = $result['access_token'];
+            $expire = $result['expires_in'] - 300;
             spWxCache::set($token_cache_key, $token, $expire);
         }
 
         return $token;
-    }
-
-    /**
-     * 获取回调IP
-     *
-     * @return mixed
-     */
-    public function get_callback_ip()
-    {
-        $url = 'https://api.weixin.qq.com/cgi-bin/getcallbackip?access_token=' . $this->getAccessToken();
-        $result = spWxHttpUtil::http_get($url);
-
-        if (isset($result['errcode']) && $result['errcode'] == '40001') {
-            $this->delAccessToken();
-            return $this->get_callback_ip();
-        }
-
-        return $result;
     }
 
     /**
@@ -286,9 +313,11 @@ class spWxApp
         $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . $this->getAccessToken();
         $result = spWxHttpUtil::http_post($url, $json);
 
+        spWxLogger::LogHttpGet($url, $result);
+
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
-            return $this->createMenu($class);
+            return $this->menu_create($class);
         }
 
         return $result;
@@ -303,6 +332,8 @@ class spWxApp
     {
         $url = 'https://api.weixin.qq.com/cgi-bin/menu/get?access_token=' . $this->getAccessToken();
         $result = spWxHttpUtil::http_get($url);
+
+        spWxLogger::LogHttpGet($url, $result);
 
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
@@ -320,6 +351,8 @@ class spWxApp
     {
         $url = 'https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=' . $this->getAccessToken();
         $result = spWxHttpUtil::http_get($url);
+
+        spWxLogger::LogHttpGet($url, $result);
 
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
@@ -348,6 +381,8 @@ class spWxApp
             $data['expire_seconds'] = intval($expire_seconds);
         }
         $result = spWxHttpUtil::http_post($url, $data);
+
+        spWxLogger::LogHttpPost($url, $data, $result);
 
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
@@ -383,6 +418,8 @@ class spWxApp
 
         $result = spWxHttpUtil::http_post($url, $data);
 
+        spWxLogger::LogHttpPost($url, $data, $result);
+
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
             return $this->shorturl($long_url, $data);
@@ -410,12 +447,12 @@ class spWxApp
 
         $result = spWxHttpUtil::http_post($url, $send);
 
+        spWxLogger::LogHttpPost($url, $send, $result);
+
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
             return $this->sendMessage($openid, $type, $data);
         }
-
-        file_put_contents('/tmp/wx_notice', $url . "\n" . var_export($send, true) . "\n\n" . var_export($result, true) . "\n\n\n", FILE_APPEND);
 
         return $result;
     }
@@ -437,6 +474,9 @@ class spWxApp
             RETRY:
             $url = "https://api.weixin.qq.com/cgi-bin/user/get?access_token=".urlencode($access_token)."&next_openid=" . $next_openid;
             $ret = spWxHttpUtil::http_get($url);
+
+            spWxLogger::LogHttpGet($url, $ret);
+
             if (isset($ret['errcode'])) {
                 if ($ret['errcode'] == 40001) {
                     $this->delAccessToken();
@@ -468,10 +508,15 @@ class spWxApp
      */
     public function user_info($openid)
     {
+        if (empty($openid)) {
+            return [];
+        }
+
         $url = 'https://api.weixin.qq.com/cgi-bin/user/info?access_token=' . $this->getAccessToken()
                . '&openid=' . $openid;
 
         $result = spWxHttpUtil::http_get($url);
+        spWxLogger::LogHttpGet($url, $result);
 
         if (isset($result['errcode']) && $result['errcode'] == '40001') {
             $this->delAccessToken();
@@ -490,6 +535,10 @@ class spWxApp
      */
     public function user_info_batch(array $openids)
     {
+        if (empty($openids)) {
+            return [];
+        }
+
         $user_list = [
             'user_list' =>  [],
         ];
@@ -504,6 +553,9 @@ class spWxApp
         $url = 'https://api.weixin.qq.com/cgi-bin/user/info/batchget?access_token=' . $this->getAccessToken();
 
         $result = spWxHttpUtil::http_post($url, $user_list);
+
+        spWxLogger::LogHttpPost($url, $user_list, $result);
+
         if (isset($result['errcode']) && $result['errcode'] == 40001) {
 
             $this->delAccessToken();
@@ -534,9 +586,11 @@ class spWxApp
         if(!$jsapi_ticket) {
             $jsapi_ticket = spWxHttpUtil::http_get($url);
 
+            spWxLogger::LogHttpGet($url, $jsapi_ticket);
+
             if (isset($jsapi_ticket['errcode']) && $jsapi_ticket['errcode'] == '40001') {
                 $this->delAccessToken();
-                return $this->getJsapiTicket($request_url);
+                return $this->getJSSDKTicket($request_url);
             }
 
             if (!isset($jsapi_ticket['ticket']) || !isset($jsapi_ticket['expires_in'])) {
@@ -562,56 +616,6 @@ class spWxApp
 
         return $jsapi_ticket;
     }
-
-
-################################################
-#
-#   TODO: 素材管理
-#
-################################################
-
-    public function material_add($type, $is_temp=true)
-    {
-        if ($is_temp) {
-            $url = 'https://api.weixin.qq.com/cgi-bin/media/upload';
-        } else {
-            $url = 'https://api.weixin.qq.com/cgi-bin/material/add_material';
-        }
-
-        $url .= '?type='.$type.'&access_token=' . $this->getAccessToken();
-
-    }
-
-    public function material_get($media_id, $is_temp=true)
-    {
-        if ($is_temp) {
-            $url = 'https://api.weixin.qq.com/cgi-bin/media/get';
-            $url .= '?media_id='.$media_id.'&access_token=' . $this->getAccessToken();
-
-            $result = spWxHttpUtil::http_get($url);
-        } else {
-            $url = 'https://api.weixin.qq.com/cgi-bin/material/get_material';
-            $url .= '?access_token=' . $this->getAccessToken();
-
-            $result = spWxHttpUtil::http_post($url, ['media_id'=>$media_id]);
-        }
-
-        if (isset($result['errcode']) && $result['errcode'] == 40001) {
-
-            $this->delAccessToken();
-            return $this->material_get($media_id, $is_temp);
-        }
-
-        # 这个接口好奇葩...
-
-    }
-
-    public function material_del($media_id)
-    {
-        $url = 'https://api.weixin.qq.com/cgi-bin/material/del_material?access_token=' . $this->getAccessToken();
-        $data = ['media_id'=>$media_id];
-    }
-
 }
 
 abstract class spWxMenu

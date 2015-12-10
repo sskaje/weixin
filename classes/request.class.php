@@ -16,7 +16,7 @@ abstract class spWxRequest
      */
     protected $message;
 
-    public function __construct(spWxRequestObject $message)
+    public function __construct(spWxRequestObjectBase $message)
     {
         $this->message = $message;
     }
@@ -40,7 +40,12 @@ abstract class spWxRequest
         );
     }
 
-    final public function checkSig()
+    /**
+     * 检查签名
+     * @return bool
+     * @throws \spWxException
+     */
+    final public function checkSignature()
     {
         if (!defined('SPWX_API_TOKEN')) {
             throw new spWxException('SPWX_API_TOKEN not defined');
@@ -114,7 +119,7 @@ class spWxRequestDefault extends spWxRequest
             $msg->setContent('你发送了一张图片，图片地址是：' . $this->message->pic_url);
         } else if ($this->message->msg_type == spWxMessage::REQUEST_LOCATION) {
             $msg->setContent('你发送了一个坐标，地址是：('.$this->message->latitude.', '.$this->message->longitude.')');
-        } else if ($this->message->msg_type == spWxMessage::REQUEST_URL || $this->message->msg_type == spWxMessage::REQUEST_LINK) {
+        } else if ($this->message->msg_type == spWxMessage::REQUEST_LINK) {
             $msg->setContent('你发送了一个链接，地址是：' . $this->message->url);
         } else if ($this->message->msg_type == spWxMessage::REQUEST_EVENT) {
             $msg->setContent('你发送了一个事件，类型是：' . $this->message->event);
@@ -211,6 +216,25 @@ class spWxRequestVideoObject extends spWxRequestObject
 {
     protected $media_id;
     protected $thumb_media_id;
+}
+
+/**
+ * 请求代理接口, 把请求转发到新的URL里
+ */
+abstract class spWxRequestProxy extends spWxRequest
+{
+    /**
+     * 转发URL
+     *
+     * @var string
+     */
+    protected $url;
+
+    final public function response()
+    {
+        echo spWxRequestForwarder::Forward($this->url);
+        exit;
+    }
 }
 
 

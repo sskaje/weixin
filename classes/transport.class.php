@@ -24,10 +24,12 @@ class spWxTransport
             $input = spWxTransportPlain::Input();
         }
 
-        file_put_contents(
-            '/tmp/wxapi.log',
-            "INPUT:\n{$_SERVER['QUERY_STRING']}\n{$input}\n\n",
-            FILE_APPEND
+        spWxLogger::Log(
+            'spWxTransport::Input',
+            [
+                'QueryString' => $_SERVER['QUERY_STRING'],
+                'Input'       => $input,
+            ]
         );
 
         return $input;
@@ -46,10 +48,12 @@ class spWxTransport
             $output = spWxTransportPlain::Output($response);
         }
 
-        file_put_contents(
-            '/tmp/wxapi.log',
-            "OUTPUT: \n{$output}\n\n========\n\n",
-            FILE_APPEND
+
+        spWxLogger::Log(
+            'spWxTransport::Output',
+            [
+                'output'    => $output,
+            ]
         );
 
         echo $output;
